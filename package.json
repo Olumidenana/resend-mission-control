@@ -1,0 +1,9 @@
+{
+  "name": "resend-mission-control",
+  "version": "1.0.0",
+  "description": "Autonomous developer telemetry dashboard and ecosystem companion engine for Resend",
+  "type": "module",
+  "keywords": ["resend", "mission-control", "dashboard", "autonomous-engine", "react-email", "deliverability", "inbound"],
+  "author": "Olumide Adeyemi-Nana",
+  "license": "MIT"
+}

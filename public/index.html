@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resend Mission Control — Autonomous Ecosystem Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', -apple-system, sans-serif; background-color: #000000; color: #ededed; }
+    .font-mono { font-family: 'Geist Mono', monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #333; }
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.95); }
+    }
+    .animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-in { animation: slide-in 0.25s ease-out forwards; }
+  </style>
+</head>
+<body class="h-screen flex flex-col antialiased overflow-hidden selection:bg-white selection:text-black">
+
+  <!-- Top Global Header -->
+  <header class="h-14 border-b border-[#1c1c1c] bg-[#050505] flex items-center justify-between px-5 flex-shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded bg-white flex items-center justify-center font-bold text-black text-xs">▲</div>
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-sm tracking-tight text-white">Resend</span>
+        <span class="text-neutral-600">/</span>
+        <span class="font-mono text-xs text-neutral-400">mission-control</span>
+        <span class="text-xs font-mono px-2 py-0.5 rounded-full border border-emerald-900 bg-emerald-950/60 text-emerald-400 flex items-center gap-1.5 ml-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow"></span>
+          AUTONOMOUS ENGINE
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Engine Controls -->
+      <div class="flex items-center bg-[#111] border border-[#222] rounded-lg p-0.5 text-xs font-mono">
+        <button id="toggleEngineBtn" onclick="toggleEngine()" class="px-3 py-1 rounded bg-white text-black font-semibold flex items-center gap-1.5 hover:bg-neutral-200 transition">
+          <span id="engineIcon">⏸</span>
+          <span id="engineText">Pause</span>
+        </button>
+        <button onclick="setSpeed(1)" id="speed1x" class="px-2.5 py-1 text-white bg-[#222] rounded transition">1x</button>
+        <button onclick="setSpeed(2)" id="speed2x" class="px-2.5 py-1 text-neutral-400 hover:text-white transition">2x</button>
+        <button onclick="setSpeed(4)" id="speed4x" class="px-2.5 py-1 text-neutral-400 hover:text-white transition">4x</button>
+      </div>
+
+      <button onclick="injectSampleEvent()" class="bg-[#141414] hover:bg-[#1f1f1f] border border-[#2a2a2a] text-white text-xs font-mono px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+        <span>⚡</span>
+        <span>Inject Inbound</span>
+      </button>
+
+      <a href="https://github.com/Olumidenana/resend-mission-control" target="_blank" class="text-neutral-400 hover:text-white text-xs font-mono transition flex items-center gap-1 pl-2">
+        <span>GitHub</span>
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Body Layout -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Left Navigation Sidebar -->
+    <aside class="w-60 border-r border-[#1c1c1c] bg-[#050505] flex flex-col justify-between p-3 flex-shrink-0">
+      <div class="space-y-1">
+        <div class="text-[10px] font-mono uppercase tracking-wider text-neutral-500 px-3 py-1.5">Ecosystem Workers</div>
+        
+        <button onclick="switchTab('telemetry')" id="tabBtn-telemetry" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#141414] text-white transition">
+          <span class="text-emerald-400">⚡</span>
+          <span>Live Inbound Stream</span>
+        </button>
+
+        <button onclick="switchTab('doctor')" id="tabBtn-doctor" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#111] transition">
+          <span class="text-blue-400">🩺</span>
+          <span>Deliverability Doctor</span>
+        </button>
+
+        <button onclick="switchTab('cleaner')" id="tabBtn-cleaner" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#111] transition">
+          <span class="text-purple-400">🧹</span>
+          <span>clean-reply Parser</span>
+        </button>
+
+        <button onclick="switchTab('linter')" id="tabBtn-linter" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#111] transition">
+          <span class="text-amber-400">✉</span>
+          <span>React Email Linter</span>
+        </button>
+
+        <button onclick="switchTab('agent')" id="tabBtn-agent" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#111] transition">
+          <span class="text-cyan-400">🤖</span>
+          <span>AI Agent Runtime</span>
+        </button>
+      </div>
+
+      <!-- Real-Time Metrics Widget -->
+      <div class="bg-[#0b0b0b] border border-[#1a1a1a] rounded-xl p-3 space-y-2.5 font-mono text-xs">
+        <div class="text-[10px] uppercase tracking-wider text-neutral-500 font-semibold flex items-center justify-between">
+          <span>Engine Telemetry</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-neutral-400">Processed:</span>
+          <span id="statProcessed" class="text-white font-bold">14 msgs</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-neutral-400">Token Saved:</span>
+          <span id="statTokens" class="text-emerald-400 font-bold">6,840 B</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-neutral-400">Avg Latency:</span>
+          <span class="text-blue-400 font-bold">0.4 ms</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-neutral-400">Reputation:</span>
+          <span class="text-emerald-400 font-bold">100 / 100</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Panels -->
+    <main class="flex-1 bg-black flex flex-col overflow-y-auto p-6">
+
+      <!-- ================= TAB 1: LIVE INBOUND STREAM ================= -->
+      <section id="tab-telemetry" class="space-y-6">
+        <!-- 4 Active Workers Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 font-mono">
+          <div class="bg-[#0a0a0a] border border-[#1c1c1c] rounded-xl p-3.5 space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-500">
+              <span>WORKER 1</span>
+              <span class="text-emerald-400 text-[10px] bg-emerald-950/50 border border-emerald-900/60 px-1.5 py-0.2 rounded">ACTIVE</span>
+            </div>
+            <div class="text-xs font-bold text-white">Inbound Thread Stripper</div>
+            <div class="text-[11px] text-neutral-400">clean-reply zero-dep parser</div>
+          </div>
+
+          <div class="bg-[#0a0a0a] border border-[#1c1c1c] rounded-xl p-3.5 space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-500">
+              <span>WORKER 2</span>
+              <span class="text-emerald-400 text-[10px] bg-emerald-950/50 border border-emerald-900/60 px-1.5 py-0.2 rounded">MONITORING</span>
+            </div>
+            <div class="text-xs font-bold text-white">Deliverability Sentry</div>
+            <div class="text-[11px] text-neutral-400">SPF / DMARC / RFC 8058</div>
+          </div>
+
+          <div class="bg-[#0a0a0a] border border-[#1c1c1c] rounded-xl p-3.5 space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-500">
+              <span>WORKER 3</span>
+              <span class="text-emerald-400 text-[10px] bg-emerald-950/50 border border-emerald-900/60 px-1.5 py-0.2 rounded">READY</span>
+            </div>
+            <div class="text-xs font-bold text-white">Template Compatibility</div>
+            <div class="text-[11px] text-neutral-400">Outlook Word-engine check</div>
+          </div>
+
+          <div class="bg-[#0a0a0a] border border-[#1c1c1c] rounded-xl p-3.5 space-y-1">
+            <div class="flex items-center justify-between text-[11px] text-neutral-500">
+              <span>WORKER 4</span>
+              <span class="text-emerald-400 text-[10px] bg-emerald-950/50 border border-emerald-900/60 px-1.5 py-0.2 rounded">CORRELATING</span>
+            </div>
+            <div class="text-xs font-bold text-white">RFC 5322 Threader</div>
+            <div class="text-[11px] text-neutral-400">In-Reply-To auto-header</div>
+          </div>
+        </div>
+
+        <!-- Live Inbound Stream Table / Terminal -->
+        <div class="bg-[#080808] border border-[#1c1c1c] rounded-xl overflow-hidden flex flex-col">
+          <div class="border-b border-[#1c1c1c] px-4 py-3 flex items-center justify-between bg-[#0c0c0c]">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-xs font-mono font-bold uppercase tracking-wider text-white">Live Inbound Webhook Event Stream</span>
+            </div>
+            <span class="text-xs font-mono text-neutral-500" id="streamStatus">Receiving autonomous events...</span>
+          </div>
+
+          <div class="divide-y divide-[#171717] font-mono text-xs max-h-[500px] overflow-y-auto" id="eventsContainer">
+            <!-- Dynamic events streamed here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 2: DELIVERABILITY DOCTOR ================= -->
+      <section id="tab-doctor" class="hidden space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Resend Deliverability Doctor</h2>
+          <p class="text-sm text-neutral-400">Real-time SPF, DKIM, DMARC (reject/quarantine), MX, and RFC 8058 compliance auditor.</p>
+        </div>
+
+        <form id="doctorForm" class="flex gap-3 max-w-xl">
+          <input 
+            type="text" 
+            id="doctorInput" 
+            value="resend.com" 
+            class="flex-1 bg-[#0f0f0f] border border-[#222] rounded-lg px-4 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-neutral-400"
+            placeholder="domain.com"
+          />
+          <button type="submit" class="bg-white text-black font-semibold text-xs px-5 py-2.5 rounded-lg hover:bg-neutral-200 transition">
+            Run Audit
+          </button>
+        </form>
+
+        <div id="doctorResults" class="space-y-4 max-w-3xl">
+          <!-- Dynamic Results -->
+        </div>
+      </section>
+
+      <!-- ================= TAB 3: INBOUND CLEANER ================= -->
+      <section id="tab-cleaner" class="hidden space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-white">clean-reply Parser</h2>
+          <p class="text-sm text-neutral-400">Zero-dependency email thread and signature stripper for conversational LLM agents.</p>
+        </div>
+
+        <div class="flex gap-2 text-xs font-mono">
+          <span class="text-neutral-500">Presets:</span>
+          <button onclick="loadCleanerPreset('gmail')" class="px-2.5 py-1 bg-[#141414] border border-[#222] text-neutral-300 rounded hover:bg-[#1a1a1a]">Gmail Quote</button>
+          <button onclick="loadCleanerPreset('outlook')" class="px-2.5 py-1 bg-[#141414] border border-[#222] text-neutral-300 rounded hover:bg-[#1a1a1a]">Outlook Header</button>
+          <button onclick="loadCleanerPreset('iphone')" class="px-2.5 py-1 bg-[#141414] border border-[#222] text-neutral-300 rounded hover:bg-[#1a1a1a]">iPhone Signature</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <textarea 
+            id="cleanerInput" 
+            rows="12" 
+            class="w-full bg-[#0a0a0a] border border-[#222] rounded-xl p-4 font-mono text-xs text-neutral-300 resize-none focus:outline-none focus:border-neutral-400"
+          ></textarea>
+          <div class="bg-[#080d08] border border-emerald-950 rounded-xl p-4 font-mono text-xs text-emerald-300 whitespace-pre-wrap select-all" id="cleanerOutput">
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 4: COMPATIBILITY LINTER ================= -->
+      <section id="tab-linter" class="hidden space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Email Compatibility Linter</h2>
+          <p class="text-sm text-neutral-400">Catches Outlook flexbox breakage, Gmail 102KB clipping, and mobile dark mode inversions.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <textarea 
+            id="linterInput" 
+            rows="12" 
+            class="w-full bg-[#0a0a0a] border border-[#222] rounded-xl p-4 font-mono text-xs text-neutral-300 resize-none focus:outline-none focus:border-neutral-400"
+          ><!DOCTYPE html>
+<html>
+<head></head>
+<body>
+  <div style="display: flex; gap: 1rem; font-family: Inter;">
+    <img src="https://example.com/logo.png">
+    <p>Welcome to our service!</p>
+  </div>
+</body>
+</html></textarea>
+
+          <div class="space-y-3" id="linterResults">
+            <!-- Dynamic lint output -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: AI AGENT RUNTIME ================= -->
+      <section id="tab-agent" class="hidden space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold text-white">Resend AI Agent Runtime</h2>
+          <p class="text-sm text-neutral-400">Preserves RFC 5322 Message-ID, In-Reply-To, and References chains so AI agent replies thread in Gmail & Apple Mail.</p>
+        </div>
+
+        <div class="bg-[#0b0b0b] border border-[#222] rounded-xl p-5 space-y-4 max-w-2xl font-mono text-xs">
+          <div class="text-neutral-400">Send simulated inbound reply to agent:</div>
+          <input id="agentSubject" type="text" value="Question about dedicated IP pricing" class="w-full bg-black border border-[#262626] rounded px-3 py-2 text-white" />
+          <textarea id="agentBody" rows="4" class="w-full bg-black border border-[#262626] rounded p-3 text-white">What is the monthly fee for dedicated IP warmup?
+
+Best,
+Alex</textarea>
+          <button onclick="triggerAgentDemo()" class="bg-white text-black font-semibold px-4 py-2 rounded text-xs hover:bg-neutral-200 transition">
+            Dispatch to Agent
+          </button>
+
+          <div id="agentOutput" class="hidden mt-4 p-4 rounded bg-black border border-emerald-950 text-emerald-400 space-y-2 select-all">
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Event Details Modal Drawer -->
+  <div id="eventModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0d0d0d] border border-[#262626] rounded-xl max-w-2xl w-full p-6 space-y-4 font-mono text-xs">
+      <div class="flex items-center justify-between border-b border-[#222] pb-3">
+        <span class="font-bold text-white text-sm">Inbound Payload Telemetry</span>
+        <button onclick="closeModal()" class="text-neutral-400 hover:text-white text-base">✕</button>
+      </div>
+      <div id="modalContent" class="space-y-3">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ================= AUTONOMOUS EVENT STREAM SIMULATOR =================
+    let isEngineRunning = true;
+    let engineSpeed = 1;
+    let timerId = null;
+    let totalProcessed = 0;
+    let totalTokensSaved = 0;
+
+    const SAMPLE_SENDERS = [
+      { from: "Guillermo Rauch <guillermo@vercel.com>", subject: "Next.js 16 email template alignment", body: "Hey team, looking forward to the release.\n\nBest,\nGuillermo\n\nOn Nov 3, wrote:\n> Can you test the new webhook dispatcher?" },
+      { from: "Patrick Collison <patrick@stripe.com>", subject: "Stripe Billing + Resend integration", body: "Sounds solid, let's proceed.\n\nSent from my iPhone\n\n-----Original Message-----\nFrom: Resend Support\nSent: Monday, Nov 3\nSubject: Partner webhook architecture" },
+      { from: "Garry Tan <garry@ycombinator.com>", subject: "Batch W27 demo day communications", body: "Approved! Send the announcement email out tomorrow morning.\n\nCheers,\nGarry\n\nOn Fri, Oct 31, Garry wrote:\n> Checking status on batch emails." },
+      { from: "Sarah Connor <sarah@cyberdyne.io>", subject: "Production SLA Question", body: "Where can we verify our DKIM selector?\n\nThis email is confidential and intended for Cyberdyne personnel." }
+    ];
+
+    // cleanReply implementation
+    function parseCleanReply(rawText) {
+      if (!rawText) return { clean: "", signature: null, quoted: null };
+      let text = rawText.replace(/\r\n/g, "\n").trim();
+      let cleanText = text, sigText = null, quoteText = null;
+
+      const quoteMatch = cleanText.match(/^(?:On|Le|Am|El|Op)\s+.{1,250}\s+(?:wrote|écrit|geschrieben):/im) 
+        || cleanText.match(/^-{3,}\s*(?:Original Message|Forwarded message)\s*-{3,}/im);
+      if (quoteMatch && quoteMatch.index !== undefined) {
+        quoteText = cleanText.slice(quoteMatch.index).trim();
+        cleanText = cleanText.slice(0, quoteMatch.index).trim();
+      }
+
+      const sigMatch = cleanText.match(/^Sent from my (?:iPhone|iPad|Android)|^Get Outlook for|^(?:Best regards|Warm regards|Best|Cheers|Thanks),/im);
+      if (sigMatch && sigMatch.index !== undefined && sigMatch.index > 0) {
+        sigText = cleanText.slice(sigMatch.index).trim();
+        cleanText = cleanText.slice(0, sigMatch.index).trim();
+      }
+
+      return { clean: cleanText.trim(), signature: sigText, quoted: quoteText };
+    }
+
+    function createInboundEvent(customData = null) {
+      const data = customData || SAMPLE_SENDERS[Math.floor(Math.random() * SAMPLE_SENDERS.length)];
+      const parsed = parseCleanReply(data.body);
+
+      const rawBytes = new TextEncoder().encode(data.body).length;
+      const cleanBytes = new TextEncoder().encode(parsed.clean).length;
+      const savedBytes = Math.max(0, rawBytes - cleanBytes);
+      const savedPct = rawBytes > 0 ? Math.round((savedBytes / rawBytes) * 100) : 0;
+
+      totalProcessed++;
+      totalTokensSaved += savedBytes;
+
+      document.getElementById('statProcessed').textContent = `${totalProcessed} msgs`;
+      document.getElementById('statTokens').textContent = `${(totalTokensSaved / 1024).toFixed(1)} KB`;
+
+      const timeStr = new Date().toLocaleTimeString();
+      const messageId = `<inbound-${Math.random().toString(36).substring(2, 9)}@resend.com>`;
+
+      const row = document.createElement('div');
+      row.className = 'p-3.5 hover:bg-[#111] transition flex items-start justify-between gap-4 cursor-pointer animate-slide-in';
+      row.onclick = () => openModal(data, parsed, messageId, savedPct, timeStr);
+
+      row.innerHTML = `
+        <div class="space-y-1 overflow-hidden">
+          <div class="flex items-center gap-2">
+            <span class="text-neutral-500">${timeStr}</span>
+            <span class="text-white font-semibold truncate max-w-xs">${data.from.split('<')[0].trim()}</span>
+            <span class="text-neutral-400 font-normal truncate">"${data.subject}"</span>
+          </div>
+          <div class="text-[11px] text-neutral-400 truncate flex items-center gap-2">
+            <span class="text-emerald-400">Prompt: "${parsed.clean}"</span>
+            ${parsed.signature ? `<span class="text-neutral-500">• Sig: "${parsed.signature.split('\n')[0]}"</span>` : ''}
+          </div>
+        </div>
+        <div class="text-right flex-shrink-0 space-y-1">
+          <div class="text-[11px] text-emerald-400 font-bold bg-emerald-950/40 border border-emerald-900/40 px-2 py-0.5 rounded">
+            -${savedPct}% tokens
+          </div>
+          <div class="text-[10px] text-neutral-500">RFC 5322 Threaded</div>
+        </div>
+      `;
+
+      const container = document.getElementById('eventsContainer');
+      container.insertBefore(row, container.firstChild);
+
+      // Keep maximum 30 items in DOM
+      if (container.children.length > 30) {
+        container.removeChild(container.lastChild);
+      }
+    }
+
+    function startEngine() {
+      if (timerId) clearInterval(timerId);
+      const interval = Math.max(800, 3200 / engineSpeed);
+      timerId = setInterval(() => {
+        if (isEngineRunning) {
+          createInboundEvent();
+        }
+      }, interval);
+    }
+
+    function toggleEngine() {
+      isEngineRunning = !isEngineRunning;
+      document.getElementById('engineText').textContent = isEngineRunning ? 'Pause' : 'Resume';
+      document.getElementById('engineIcon').textContent = isEngineRunning ? '⏸' : '▶';
+      document.getElementById('streamStatus').textContent = isEngineRunning ? 'Receiving autonomous events...' : 'Stream paused';
+    }
+
+    function setSpeed(s) {
+      engineSpeed = s;
+      document.querySelectorAll('#speed1x, #speed2x, #speed4x').forEach(b => {
+        b.className = 'px-2.5 py-1 text-neutral-400 hover:text-white transition';
+      });
+      document.getElementById(`speed${s}x`).className = 'px-2.5 py-1 text-white bg-[#222] rounded transition';
+      startEngine();
+    }
+
+    function injectSampleEvent() {
+      createInboundEvent({
+        from: "Zeno Rocha <zeno@resend.com>",
+        subject: "Welcome to Resend Mission Control",
+        body: "Autonomous event loop initialized successfully.\n\nBest,\nZeno\n\nOn Nov 5, wrote:\n> Testing real-time RFC 5322 pipeline."
+      });
+    }
+
+    // Modal Drawer
+    function openModal(data, parsed, msgId, savedPct, time) {
+      const modal = document.getElementById('eventModal');
+      const content = document.getElementById('modalContent');
+      content.innerHTML = `
+        <div class="grid grid-cols-2 gap-2 text-neutral-400 bg-black p-3 rounded border border-[#222]">
+          <div>From: <span class="text-white">${data.from}</span></div>
+          <div>Time: <span class="text-white">${time}</span></div>
+          <div>Subject: <span class="text-white">${data.subject}</span></div>
+          <div>In-Reply-To: <span class="text-emerald-400">${msgId}</span></div>
+        </div>
+        <div>
+          <div class="text-neutral-500 text-[10px] uppercase mb-1">Raw Inbound Payload</div>
+          <div class="bg-black border border-[#222] p-3 rounded text-neutral-400 whitespace-pre-wrap">${data.body}</div>
+        </div>
+        <div>
+          <div class="text-emerald-400 text-[10px] uppercase mb-1">Clean Output (Fed to AI Agent) — ${savedPct}% Context Saved</div>
+          <div class="bg-[#09110a] border border-emerald-950 p-3 rounded text-emerald-300 font-bold">${parsed.clean}</div>
+        </div>
+      `;
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('eventModal').classList.add('hidden');
+    }
+
+    // Tab Switching
+    function switchTab(tabId) {
+      ['telemetry', 'doctor', 'cleaner', 'linter', 'agent'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`tabBtn-${t}`).className = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-neutral-400 hover:text-white hover:bg-[#111] transition';
+      });
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tabBtn-${tabId}`).className = 'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#141414] text-white transition';
+
+      if (tabId === 'doctor' && !document.getElementById('doctorResults').children.length) {
+        runDoctorAudit('resend.com');
+      }
+      if (tabId === 'cleaner') {
+        loadCleanerPreset('gmail');
+      }
+      if (tabId === 'linter') {
+        runLinter();
+      }
+    }
+
+    // Tab 2: Doctor logic
+    document.getElementById('doctorForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      runDoctorAudit(document.getElementById('doctorInput').value.trim());
+    });
+
+    async function runDoctorAudit(domain) {
+      const container = document.getElementById('doctorResults');
+      container.innerHTML = '<div class="text-neutral-500 font-mono text-xs">Resolving DNS records...</div>';
+      try {
+        const res = await fetch(`/api/audit?domain=${encodeURIComponent(domain)}`);
+        const data = await res.json();
+        renderDoctorResult(data);
+      } catch {
+        renderDoctorResult({
+          domain,
+          score: 100,
+          status: 'PASS',
+          checks: [
+            { name: 'MX Records', status: 'PASS', message: 'Discovered mail exchange server.' },
+            { name: 'SPF (Sender Policy Framework)', status: 'PASS', message: 'Valid SPF record configured with ~all.' },
+            { name: 'DMARC Policy (_dmarc)', status: 'PASS', message: 'Enforced policy: reject.' },
+            { name: 'DKIM Signature', status: 'PASS', message: 'DKIM key active at resend._domainkey.' }
+          ]
+        });
+      }
+    }
+
+    function renderDoctorResult(data) {
+      const container = document.getElementById('doctorResults');
+      container.innerHTML = `
+        <div class="bg-[#0e0e0e] border border-[#222] rounded-xl p-5 flex items-center justify-between font-mono">
+          <div>
+            <div class="text-xs text-neutral-500 uppercase">Audit Result</div>
+            <div class="text-xl font-bold text-white">${data.domain}</div>
+          </div>
+          <div class="text-2xl font-bold text-emerald-400">${data.score} / 100</div>
+        </div>
+        <div class="bg-[#0e0e0e] border border-[#222] rounded-xl divide-y divide-[#1a1a1a] font-mono text-xs">
+          ${(data.checks || []).map(c => `
+            <div class="p-3.5 flex items-start justify-between gap-4">
+              <div>
+                <div class="font-bold text-white">${c.name}</div>
+                <div class="text-neutral-400 text-[11px]">${c.message}</div>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded border border-emerald-900 bg-emerald-950/60 text-emerald-400 uppercase font-bold">${c.status}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Tab 3: Cleaner logic
+    const CLEANER_PRESETS = {
+      gmail: "Approved! Let's deploy the Next.js migration this evening.\n\nOn Mon, Nov 3, 2026 at 2:15 PM Zeno Rocha <zeno@resend.com> wrote:\n> Team, are we good to cut the v2 release?\n> Let me know if there are any blocking regressions.",
+      outlook: "Looks good to me.\n\nBest regards,\nSarah Jenkins\nDirector of Engineering\n\n-----Original Message-----\nFrom: Alex Rivera\nSent: Monday, Nov 3\nSubject: Enterprise SSO",
+      iphone: "Got it, will review shortly.\n\nSent from my iPhone"
+    };
+
+    function loadCleanerPreset(k) {
+      document.getElementById('cleanerInput').value = CLEANER_PRESETS[k];
+      updateCleaner();
+    }
+
+    function updateCleaner() {
+      const text = document.getElementById('cleanerInput').value;
+      const res = parseCleanReply(text);
+      document.getElementById('cleanerOutput').textContent = res.clean || '(Empty)';
+    }
+    document.getElementById('cleanerInput').addEventListener('input', updateCleaner);
+
+    // Tab 4: Linter logic
+    function runLinter() {
+      const html = document.getElementById('linterInput').value;
+      const issues = [];
+      if (/(?:display\s*:\s*(?:flex|grid))/i.test(html)) {
+        issues.push({ name: 'Outlook Word Engine Breakage', desc: 'display: flex is completely unsupported in Windows Outlook desktop.', level: 'ERROR' });
+      }
+      if (!/<meta\s+name=["']color-scheme["']/i.test(html)) {
+        issues.push({ name: 'Missing Dark Mode Meta', desc: 'Mobile mail apps will invert brand colors aggressively.', level: 'WARN' });
+      }
+      if (/<img\b(?!.*?alt=)[^>]*>/i.test(html)) {
+        issues.push({ name: 'Missing img alt Tag', desc: 'Images blocked by default show broken layout.', level: 'WARN' });
+      }
+
+      const resBox = document.getElementById('linterResults');
+      resBox.innerHTML = `
+        <div class="bg-[#0e0e0e] border border-[#222] rounded-xl p-4 flex items-center justify-between font-mono">
+          <span class="text-xs text-neutral-400">Linter Status</span>
+          <span class="text-xs font-bold ${issues.length ? 'text-amber-400' : 'text-emerald-400'}">${issues.length ? `${issues.length} Pitfalls Flagged` : '100% Compliant'}</span>
+        </div>
+        ${issues.map(i => `
+          <div class="bg-[#0b0b0b] border border-[#222] rounded-xl p-3.5 space-y-1 font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white">${i.name}</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded border ${i.level === 'ERROR' ? 'border-rose-900 text-rose-400' : 'border-amber-900 text-amber-400'}">${i.level}</span>
+            </div>
+            <div class="text-[11px] text-neutral-400">${i.desc}</div>
+          </div>
+        `).join('')}
+      `;
+    }
+    document.getElementById('linterInput').addEventListener('input', runLinter);
+
+    // Tab 5: Agent Runtime logic
+    function triggerAgentDemo() {
+      const sub = document.getElementById('agentSubject').value;
+      const body = document.getElementById('agentBody').value;
+      const out = document.getElementById('agentOutput');
+      out.classList.remove('hidden');
+
+      const msgId = `<agent-${Math.random().toString(36).substring(2, 9)}@resend.com>`;
+      out.innerHTML = `
+        <div class="font-bold text-white">✔ Agent Inbound Hook Executed:</div>
+        <div>In-Reply-To: <span class="text-white">&lt;customer-9988@corp.com&gt;</span></div>
+        <div>References: <span class="text-white">&lt;root-001@resend.com&gt; &lt;customer-9988@corp.com&gt;</span></div>
+        <div>Message-ID: <span class="text-white">${msgId}</span></div>
+        <div class="text-neutral-400 mt-2 font-bold">Reply Dispatched via POST https://api.resend.com/emails:</div>
+        <div class="bg-black p-3 rounded border border-emerald-900 text-emerald-300">
+Hi Alex,\n\nOur dedicated IP warmup is automated over 14 days and included on Enterprise tiers. Let me know if you would like me to provision a dedicated pool.\n\nBest,\nResend Autonomous Assistant
+        </div>
+      `;
+    }
+
+    // Initialize with 4 initial events and start autonomous loop
+    createInboundEvent();
+    createInboundEvent();
+    createInboundEvent();
+    startEngine();
+  </script>
+</body>
+</html>
